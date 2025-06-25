@@ -133,6 +133,10 @@ lazy val benchmarks = gatlingModule("gatling-benchmarks")
 lazy val app = gatlingModule("gatling-app")
   .disablePlugins(SbtSpotless)
   .dependsOn(core, coreJava, http, httpJava, jms, jmsJava, jdbc, jdbcJava, redis, redisJava, charts)
+  .settings(
+    fork := true,
+    javaOptions += "--add-opens=java.base/java.lang=ALL-UNNAMED"
+  )
 
 lazy val recorder = gatlingModule("gatling-recorder")
   .dependsOn(core % "compile->compile;test->test", http)
