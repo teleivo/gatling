@@ -35,11 +35,11 @@ import io.gatling.core.stats.writer._
 import com.typesafe.scalalogging.StrictLogging
 import io.github.metarank.cfor._
 
-private object LogFileParser {
+object LogFileParser {
   val LogStep = 100000
 }
 
-private abstract class LogFileParser[T](logFile: File) extends AutoCloseable {
+abstract class LogFileParser[T](logFile: File) extends AutoCloseable {
   private val is = new DataInputStream(new BufferedInputStream(Files.newInputStream(logFile.toPath)))
   private val skipBuffer = new Array[Byte](1024)
   private val stringCache = new ju.HashMap[Int, String]
@@ -356,7 +356,7 @@ private final class SecondPassParser(logFile: File, runInfo: RunInfo, step: Doub
   }
 }
 
-private[gatling] object LogFileReader extends StrictLogging {
+object LogFileReader extends StrictLogging {
   private val SecMillisecRatio: Double = 1000.0
 
   def apply(runUuid: String, resultsDirectory: Path, configuration: GatlingConfiguration): LogFileReader = {
@@ -370,7 +370,7 @@ private[gatling] object LogFileReader extends StrictLogging {
   }
 }
 
-private[gatling] final class LogFileReader(logFile: File, configuration: GatlingConfiguration) extends StrictLogging {
+final class LogFileReader(logFile: File, configuration: GatlingConfiguration) extends StrictLogging {
   import LogFileReader._
 
   def read(): LogFileData = {

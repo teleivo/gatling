@@ -45,3 +45,18 @@ gatling-version.properties
 version.sbt
 .claude
 CLAUDE.local.md
+plan*.md
+
+# scala-cli build artifacts
+.scala-build/
+.bsp/scala-cli.json
+
+# scala-cli generated binaries and artifacts
+glog
+glog-native
+glog.jar
+*.build_artifacts.txt
+
+# temporary CSV files and test outputs
+*.csv
+test.log
