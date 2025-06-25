@@ -8,35 +8,70 @@ This CLI uses Gatling's internal binary log parser to extract all performance te
 
 ## Building
 
+### Build Standalone Executable
+
+```bash
+sbt "gatling-app/stage"
+```
+
+This creates a standalone executable at `gatling-app/target/universal/stage/bin/gatling-simulation-parse`.
+
+### Build for Development
+
 ```bash
 sbt "gatling-app/compile"
 ```
 
 ## Running
 
-### Basic Usage
+### Standalone CLI (Recommended)
+
+After building, you can run the CLI directly:
 
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli <path-to-simulation.log>"
+./gatling-app/target/universal/stage/bin/gatling-simulation-parse simulation.log
 ```
 
-### Example
+Or use the convenient wrapper script:
 
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli ./simulation.log"
+./gatling-simulation-parse simulation.log
 ```
 
-### Save Output to File
+### SBT Development Mode
 
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli ./simulation.log" > results.csv 2>/dev/null
+sbt "gatling-app/runMain io.gatling.app.LogParserCli <absolute-path-to-simulation.log>"
 ```
 
-### Count Successful Requests
+**Note:** Use absolute paths with SBT as it runs from a different working directory.
 
+### Usage Examples
+
+**Basic usage (clean CSV output):**
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli ./simulation.log" 2>&1 | grep "\[info\] request.*,OK," | wc -l
+./gatling-simulation-parse simulation.log
 ```
+
+**With debug logging enabled:**
+```bash
+./gatling-simulation-parse --debug simulation.log
+```
+
+**Save output to file:**
+```bash
+./gatling-simulation-parse simulation.log > results.csv
+```
+
+**Count successful requests:**
+```bash
+./gatling-simulation-parse simulation.log | grep "^request.*,OK," | wc -l
+```
+
+### Command Line Options
+
+- `--debug`: Enable debug logging output. By default, only clean CSV data is output to stdout, with debug logs suppressed for clean CSV processing.
+- `<simulation.log>`: Path to the Gatling binary simulation log file
 
 ## Output Format
 
@@ -86,13 +121,27 @@ record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,en
 - Handles string caching and binary format parsing automatically
 - CSV values are properly escaped for special characters (quotes, commas, newlines)
 - Skips version compatibility checks to allow parsing logs from different Gatling versions
+- **Clean Output**: By default, suppresses all debug logging to ensure clean CSV output suitable for piping and processing
+- **Debug Mode**: Use `--debug` flag to enable full logging for troubleshooting
 
 ## Testing
 
 The provided `simulation.log` contains 97 successful HTTP requests, which can be verified with:
 
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli ./simulation.log" 2>&1 | grep "\[info\] request.*,OK," | wc -l
+./gatling-simulation-parse simulation.log | grep "^request.*,OK," | wc -l
 ```
 
 Expected output: `97`
+
+### Alternative Testing Methods
+
+**Using the staged binary directly:**
+```bash
+./gatling-app/target/universal/stage/bin/gatling-simulation-parse simulation.log | grep "^request.*,OK," | wc -l
+```
+
+**Using SBT (requires absolute path):**
+```bash
+sbt "gatling-app/runMain io.gatling.app.LogParserCli $(pwd)/simulation.log" 2>&1 | grep "\[info\] request.*,OK," | wc -l
+```

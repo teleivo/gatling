@@ -29,13 +29,12 @@ import com.typesafe.scalalogging.StrictLogging
 object LogParserCli extends StrictLogging {
 
   def main(args: Array[String]): Unit = {
-    if (args.length != 1) {
-      System.err.println("Usage: LogParserCli <simulation.log>")
-      sys.exit(1)
-    }
+    val (debugEnabled, logFilePath) = parseArgs(args)
 
-    val logFilePath = args(0)
-    val logFile = new File(logFilePath)
+    // Configure logging level
+    configureLogging(debugEnabled)
+
+    val logFile = new File(logFilePath).getAbsoluteFile
 
     if (!logFile.exists()) {
       System.err.println(s"File not found: $logFilePath")
@@ -44,31 +43,54 @@ object LogParserCli extends StrictLogging {
 
     Try {
       val configuration = GatlingConfiguration.load()
-      val parser = new CustomLogFileReader(logFile, configuration)
+      val parser = new CustomLogFileReader(logFile, configuration, debugEnabled)
       parser.parseAndOutputCsv()
     } match {
       case Success(_) => // Success, CSV written to stdout
       case Failure(exception) =>
         System.err.println(s"Error parsing log file: ${exception.getMessage}")
-        logger.error("Parsing failed", exception)
+        if (debugEnabled) {
+          logger.error("Parsing failed", exception)
+        }
         sys.exit(1)
+    }
+  }
+
+  private def parseArgs(args: Array[String]): (Boolean, String) =
+    args.toList match {
+      case "--debug" :: logFile :: Nil => (true, logFile)
+      case logFile :: "--debug" :: Nil => (true, logFile)
+      case logFile :: Nil              => (false, logFile)
+      case _ =>
+        System.err.println("Usage: LogParserCli [--debug] <simulation.log>")
+        sys.exit(1)
+    }
+
+  private def configureLogging(debugEnabled: Boolean): Unit = {
+    val rootLogger = org.slf4j.LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[ch.qos.logback.classic.Logger]
+    if (debugEnabled) {
+      rootLogger.setLevel(ch.qos.logback.classic.Level.DEBUG)
+    } else {
+      rootLogger.setLevel(ch.qos.logback.classic.Level.ERROR)
     }
   }
 }
 
-class CustomLogFileReader(logFile: File, configuration: GatlingConfiguration) extends StrictLogging {
+class CustomLogFileReader(logFile: File, configuration: GatlingConfiguration, debugEnabled: Boolean) extends StrictLogging {
 
   def parseAndOutputCsv(): Unit = {
     // Print CSV header
-    println("record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,end_timestamp,response_time_ms,error_message,event_type,duration_ms,cumulated_response_time_ms,is_incoming")
+    println(
+      "record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,end_timestamp,response_time_ms,error_message,event_type,duration_ms,cumulated_response_time_ms,is_incoming"
+    )
 
     // Create a custom parser that outputs CSV as it reads
-    val parser = new CsvOutputParser(logFile, configuration)
+    val parser = new CsvOutputParser(logFile, configuration, debugEnabled)
     parser.parse()
   }
 }
 
-private class CsvOutputParser(logFile: File, configuration: GatlingConfiguration) extends StrictLogging {
+private class CsvOutputParser(logFile: File, configuration: GatlingConfiguration, debugEnabled: Boolean) extends StrictLogging {
   import java.{ lang => jl, util => ju }
   import java.io.{ BufferedInputStream, DataInputStream, EOFException }
   import java.nio.ByteBuffer
@@ -142,18 +164,19 @@ private class CsvOutputParser(logFile: File, configuration: GatlingConfiguration
       skipString()
     }
 
-  private def escapeCsv(value: String): String = {
+  private def escapeCsv(value: String): String =
     if (value.contains("\"") || value.contains(",") || value.contains("\n")) {
       "\"" + value.replace("\"", "\"\"") + "\""
     } else {
       value
     }
-  }
 
   private def parseRunRecord(): Unit = {
     val gatlingVersion = readString()
     // Skip version check to allow parsing logs from different versions
-    logger.debug(s"Log file was generated with Gatling $gatlingVersion, parsing with ${GatlingVersion.ThisVersion.fullVersion}")
+    if (debugEnabled) {
+      logger.debug(s"Log file was generated with Gatling $gatlingVersion, parsing with ${GatlingVersion.ThisVersion.fullVersion}")
+    }
 
     val simulationClassName = readString()
     runStart = readLong()
@@ -173,7 +196,7 @@ private class CsvOutputParser(logFile: File, configuration: GatlingConfiguration
     val scenarioName = if (scenarioIndex < scenarios.length) scenarios(scenarioIndex) else s"unknown_$scenarioIndex"
     val eventType = if (event == MessageEvent.Start) "start" else "end"
 
-    println(s"user,${escapeCsv(scenarioName)},,,,${timestamp},,,,${eventType},,,")
+    println(s"user,${escapeCsv(scenarioName)},,,,$timestamp,,,,$eventType,,,")
   }
 
   private def parseRequestRecord(): Unit = {
@@ -196,7 +219,9 @@ private class CsvOutputParser(logFile: File, configuration: GatlingConfiguration
     }
     val isIncoming = if (endTimestamp == Long.MinValue) "true" else "false"
 
-    println(s"request,,${escapeCsv(groupHierarchy)},${escapeCsv(name)},${status},${startTimestamp},${endTimestamp},${responseTime},${escapeCsv(errorMessage)},,,,${isIncoming}")
+    println(
+      s"request,,${escapeCsv(groupHierarchy)},${escapeCsv(name)},$status,$startTimestamp,$endTimestamp,$responseTime,${escapeCsv(errorMessage)},,,,$isIncoming"
+    )
   }
 
   private def parseGroupRecord(): Unit = {
@@ -209,21 +234,21 @@ private class CsvOutputParser(logFile: File, configuration: GatlingConfiguration
 
     val duration = (endTimestamp - startTimestamp).toInt
 
-    println(s"group,,${escapeCsv(groupHierarchy)},,${status},${startTimestamp},${endTimestamp},,,,${duration},${cumulatedResponseTime},")
+    println(s"group,,${escapeCsv(groupHierarchy)},,$status,$startTimestamp,$endTimestamp,,,,$duration,$cumulatedResponseTime,")
   }
 
   private def parseErrorRecord(): Unit = {
     val message = readCachedSanitizedString()
     val timestamp = readInt() + runStart
 
-    println(s"error,,,,,${timestamp},,${escapeCsv(message)},,,,")
+    println(s"error,,,,,$timestamp,,${escapeCsv(message)},,,,")
   }
 
-  def parse(): Unit = {
+  def parse(): Unit =
     try {
       readByte() match {
         case RecordHeader.Run.value => parseRunRecord()
-        case _ => throw new UnsupportedOperationException(s"The log file $logFile is malformed and doesn't start with a proper record")
+        case _                      => throw new UnsupportedOperationException(s"The log file $logFile is malformed and doesn't start with a proper record")
       }
 
       var continue = true
@@ -240,12 +265,13 @@ private class CsvOutputParser(logFile: File, configuration: GatlingConfiguration
           }
         } catch {
           case e: EOFException =>
-            logger.error("Log file is truncated, can only generate partial results.", e)
+            if (debugEnabled) {
+              logger.error("Log file is truncated, can only generate partial results.", e)
+            }
             continue = false
         }
       }
     } finally {
       is.close()
     }
-  }
 }

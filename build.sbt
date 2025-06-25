@@ -131,11 +131,25 @@ lazy val benchmarks = gatlingModule("gatling-benchmarks")
   .settings(libraryDependencies ++= benchmarkDependencies)
 
 lazy val app = gatlingModule("gatling-app")
+  .enablePlugins(JavaAppPackaging)
   .disablePlugins(SbtSpotless)
   .dependsOn(core, coreJava, http, httpJava, jms, jmsJava, jdbc, jdbcJava, redis, redisJava, charts)
   .settings(
     fork := true,
-    javaOptions += "--add-opens=java.base/java.lang=ALL-UNNAMED"
+    javaOptions += "--add-opens=java.base/java.lang=ALL-UNNAMED",
+    // Native packager settings for standalone CLI
+    Compile / mainClass := Some("io.gatling.app.LogParserCli"),
+    executableScriptName := "gatling-simulation-parse",
+    bashScriptExtraDefines += """addJava "--add-opens=java.base/java.lang=ALL-UNNAMED"""",
+    // Assembly settings for fat JAR
+    assembly / assemblyMergeStrategy := {
+      case "module-info.class" => MergeStrategy.discard
+      case PathList("META-INF", "versions", xs @ _*) => MergeStrategy.discard  
+      case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+      case x => MergeStrategy.first
+    },
+    assembly / mainClass := Some("io.gatling.app.LogParserCli"),
+    assembly / assemblyJarName := "gatling-simulation-parse.jar"
   )
 
 lazy val recorder = gatlingModule("gatling-recorder")
