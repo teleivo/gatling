@@ -45,3 +45,4 @@ gatling-version.properties
 version.sbt
 .claude
 CLAUDE.local.md
+plan*.md
