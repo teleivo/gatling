@@ -8,13 +8,13 @@ This CLI uses Gatling's internal binary log parser to extract all performance te
 
 ## Building
 
-### Build Standalone Executable
+### Build Fat JAR (Recommended)
 
 ```bash
-sbt "gatling-app/stage"
+sbt "gatling-app/assembly"
 ```
 
-This creates a standalone executable at `gatling-app/target/universal/stage/bin/gatling-simulation-parse`.
+This creates a standalone JAR at `gatling-app/target/gatling-simulation-parse.jar`.
 
 ### Build for Development
 
@@ -24,48 +24,42 @@ sbt "gatling-app/compile"
 
 ## Running
 
-### Standalone CLI (Recommended)
+### Fat JAR (Recommended)
 
-After building, you can run the CLI directly:
-
-```bash
-./gatling-app/target/universal/stage/bin/gatling-simulation-parse simulation.log
-```
-
-Or use the convenient wrapper script:
+After building the fat JAR, you can run the CLI directly:
 
 ```bash
-./gatling-simulation-parse simulation.log
+java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log
 ```
+
+**Note:** The `--add-opens` flag is required for Gatling's internal string optimization to work.
 
 ### SBT Development Mode
 
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli <absolute-path-to-simulation.log>"
+sbt "gatling-app/runMain io.gatling.app.LogParserCli simulation.log"
 ```
-
-**Note:** Use absolute paths with SBT as it runs from a different working directory.
 
 ### Usage Examples
 
 **Basic usage (clean CSV output):**
 ```bash
-./gatling-simulation-parse simulation.log
+java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log
 ```
 
 **With debug logging enabled:**
 ```bash
-./gatling-simulation-parse --debug simulation.log
+java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli --debug simulation.log
 ```
 
 **Save output to file:**
 ```bash
-./gatling-simulation-parse simulation.log > results.csv
+java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log > results.csv
 ```
 
 **Count successful requests:**
 ```bash
-./gatling-simulation-parse simulation.log | grep "^request.*,OK," | wc -l
+java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
 ```
 
 ### Command Line Options
@@ -93,10 +87,24 @@ record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,en
 - `error_message`: Error description (if any)
 - `is_incoming`: "true" for unmatched incoming events, "false" for regular requests
 
+```sh
+grep request results.csv | head -2
+```
+
+> [!NOTE]
+> A request has no scenario name. In the OSS dashboard you can also not see anything about
+> scenarios. Maybe scenarios are a pure enterprise features when it comes to visualization.
+> The requests are grouped by the HTTP/request name in the details page. That name also shows up in
+> the assertions on the global page.
+
 **User Records** (`record_type=user`):
 - `scenario_name`: Name of the scenario
 - `event_type`: "start" or "end"
 - `start_timestamp`: Unix timestamp in milliseconds
+
+```sh
+head -1 results.csv;grep user results.csv | head -2
+```
 
 **Group Records** (`record_type=group`):
 - `group_hierarchy`: Pipe-separated group names
@@ -105,9 +113,16 @@ record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,en
 - `duration_ms`: Group duration in milliseconds
 - `cumulated_response_time_ms`: Sum of response times
 
+```sh
+head -1 results.csv;grep group, results.csv | head -1
+```
+
 **Error Records** (`record_type=error`):
 - `error_message`: Error description
 - `start_timestamp`: Unix timestamp in milliseconds
+
+> [!NOTE]
+> Have not seen any yet.
 
 ## Requirements
 
@@ -129,19 +144,19 @@ record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,en
 The provided `simulation.log` contains 97 successful HTTP requests, which can be verified with:
 
 ```bash
-./gatling-simulation-parse simulation.log | grep "^request.*,OK," | wc -l
+java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
 ```
 
 Expected output: `97`
 
 ### Alternative Testing Methods
 
-**Using the staged binary directly:**
+**Using the fat JAR directly:**
 ```bash
-./gatling-app/target/universal/stage/bin/gatling-simulation-parse simulation.log | grep "^request.*,OK," | wc -l
+java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
 ```
 
-**Using SBT (requires absolute path):**
+**Using SBT:**
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli $(pwd)/simulation.log" 2>&1 | grep "\[info\] request.*,OK," | wc -l
+sbt "gatling-app/runMain io.gatling.app.LogParserCli simulation.log" 2>&1 | grep -E '^request.*,OK,' | wc -l
 ```
