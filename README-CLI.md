@@ -17,7 +17,7 @@ format.
 2. Build the CLI
 
 ```sh
-scala-cli package gatling-simulation-log-parser.scala --native-image --power --output glog
+scala-cli package GatlingSimulationLogParser.scala --native-image --power --output glog
 ```
 
 3. Run it
@@ -33,20 +33,20 @@ scala-cli package gatling-simulation-log-parser.scala --native-image --power --o
 Compile and test with JVM (fast iteration):
 
 ```sh
-scala-cli compile gatling-simulation-log-parser.scala
-scala-cli run gatling-simulation-log-parser.scala -- simulation.log
+scala-cli compile GatlingSimulationLogParser.scala
+scala-cli run GatlingSimulationLogParser.scala -- simulation.log
 ```
 
 Run tests:
 
 ```sh
-scala-cli test gatling-simulation-log-parser.scala
+scala-cli test GatlingSimulationLogParser.scala
 ```
 
 Format code:
 
 ```sh
-scala-cli fmt gatling-simulation-log-parser.scala
+scala-cli fmt GatlingSimulationLogParser.scala
 ```
 
 ## Building
@@ -56,7 +56,7 @@ scala-cli fmt gatling-simulation-log-parser.scala
 Build a self-contained native executable:
 
 ```sh
-scala-cli package gatling-simulation-log-parser.scala --native-image --power --output glog
+scala-cli package GatlingSimulationLogParser.scala --native-image --power --output glog
 ```
 
 This creates:
@@ -70,7 +70,7 @@ This creates:
 Build a standalone JAR:
 
 ```sh
-scala-cli package gatling-simulation-log-parser.scala --assembly --power --output glog.jar
+scala-cli package GatlingSimulationLogParser.scala --assembly --power --output glog.jar
 ```
 
 ## Running
@@ -142,12 +142,12 @@ TODO release to GH
 
 1. Install Scala CLI
 2. Clone/download the source
-3. Build: `scala-cli package gatling-simulation-log-parser.scala --native-image --power --output glog`
+3. Build: `scala-cli package GatlingSimulationLogParser.scala --native-image --power --output glog`
 4. Run: `./glog simulation.log`
 
 ### Option 3: Use JVM Version
 
 1. Install Java 17+
-2. Build JAR: `scala-cli package gatling-simulation-log-parser.scala --assembly --power --output glog.jar`
+2. Build JAR: `scala-cli package GatlingSimulationLogParser.scala --assembly --power --output glog.jar`
 3. Run: `java -jar glog.jar simulation.log`
 
