@@ -46,3 +46,17 @@ version.sbt
 .claude
 CLAUDE.local.md
 plan*.md
+
+# scala-cli build artifacts
+.scala-build/
+.bsp/scala-cli.json
+
+# scala-cli generated binaries and artifacts
+gatling-parser
+gatling-parser-native
+gatling-parser.jar
+*.build_artifacts.txt
+
+# temporary CSV files and test outputs
+*.csv
+test.log

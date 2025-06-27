@@ -1,2 +1,0 @@
-#!/bin/bash
-exec java --add-opens=java.base/java.lang=ALL-UNNAMED -jar "$(dirname "$0")/gatling-simulation-parse.jar" "$@"
