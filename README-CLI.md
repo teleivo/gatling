@@ -1,65 +1,93 @@
 # Gatling Log Parser CLI
 
-A command-line tool for parsing Gatling binary simulation.log files and outputting all data in CSV format.
+A user-friendly command-line tool for parsing Gatling binary simulation.log files and outputting all data in CSV format.
 
 ## Overview
 
 This CLI uses Gatling's internal binary log parser to extract all performance test data from simulation.log files and outputs it as CSV to stdout. It leverages the same parser that Gatling uses internally, ensuring compatibility and staying in sync with Gatling versions.
+
+## Quick Start
+
+1. **Build the CLI:**
+   ```bash
+   sbt "project gatling-app" assembly
+   ```
+
+2. **Run with a simulation log:**
+   ```bash
+   ./gatling-simulation-parse simulation.log > results.csv
+   ```
+
+That's it! The CLI handles all the Java arguments automatically.
 
 ## Building
 
 ### Build Fat JAR (Recommended)
 
 ```bash
-sbt "gatling-app/assembly"
+sbt "project gatling-app" assembly
 ```
 
-This creates a standalone JAR at `gatling-app/target/gatling-simulation-parse.jar`.
+This creates a standalone JAR at `gatling-app/target/gatling-simulation-parse.jar` and copies it to the root directory.
 
 ### Build for Development
 
 ```bash
-sbt "gatling-app/compile"
+sbt "project gatling-app" compile
 ```
 
 ## Running
 
-### Fat JAR (Recommended)
+### User-Friendly Wrapper Script (Recommended)
 
-After building the fat JAR, you can run the CLI directly:
+After building, use the wrapper script that handles all Java arguments automatically:
 
 ```bash
-java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log
+./gatling-simulation-parse simulation.log
 ```
 
-**Note:** The `--add-opens` flag is required for Gatling's internal string optimization to work.
+### Portable Version
+
+For distribution, you can use the portable version (JAR + script):
+
+```bash
+./gatling-simulation-parse-portable simulation.log
+```
+
+### Direct JAR Execution
+
+If you prefer to run the JAR directly:
+
+```bash
+java --add-opens=java.base/java.lang=ALL-UNNAMED -jar gatling-simulation-parse.jar simulation.log
+```
 
 ### SBT Development Mode
 
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli simulation.log"
+sbt "project gatling-app" "runMain io.gatling.app.LogParserCli simulation.log"
 ```
 
 ### Usage Examples
 
 **Basic usage (clean CSV output):**
 ```bash
-java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log
+./gatling-simulation-parse simulation.log
 ```
 
 **With debug logging enabled:**
 ```bash
-java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli --debug simulation.log
+./gatling-simulation-parse --debug simulation.log
 ```
 
 **Save output to file:**
 ```bash
-java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log > results.csv
+./gatling-simulation-parse simulation.log > results.csv
 ```
 
 **Count successful requests:**
 ```bash
-java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
+./gatling-simulation-parse simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
 ```
 
 ### Command Line Options
@@ -144,19 +172,37 @@ head -1 results.csv;grep group, results.csv | head -1
 The provided `simulation.log` contains 97 successful HTTP requests, which can be verified with:
 
 ```bash
-java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
+./gatling-simulation-parse simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
 ```
 
 Expected output: `97`
 
 ### Alternative Testing Methods
 
-**Using the fat JAR directly:**
+**Using the portable version:**
 ```bash
-java --add-opens java.base/java.lang=ALL-UNNAMED -cp gatling-app/target/gatling-simulation-parse.jar io.gatling.app.LogParserCli simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
+./gatling-simulation-parse-portable simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
+```
+
+**Using the JAR directly:**
+```bash
+java --add-opens=java.base/java.lang=ALL-UNNAMED -jar gatling-simulation-parse.jar simulation.log 2>/dev/null | grep "^request.*,OK," | wc -l
 ```
 
 **Using SBT:**
 ```bash
-sbt "gatling-app/runMain io.gatling.app.LogParserCli simulation.log" 2>&1 | grep -E '^request.*,OK,' | wc -l
+sbt "project gatling-app" "runMain io.gatling.app.LogParserCli simulation.log" 2>&1 | grep -E '^request.*,OK,' | wc -l
+```
+
+## Distribution
+
+To distribute the CLI tool, provide users with:
+
+1. **gatling-simulation-parse.jar** - The fat JAR containing all dependencies
+2. **gatling-simulation-parse-portable** - The wrapper script that handles Java arguments
+
+Users can then run:
+```bash
+chmod +x gatling-simulation-parse-portable
+./gatling-simulation-parse-portable simulation.log > results.csv
 ```

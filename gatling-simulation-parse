@@ -1,7 +1,2 @@
 #!/bin/bash
-
-# Find the script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Execute the staged binary
-exec "$SCRIPT_DIR/gatling-app/target/universal/stage/bin/gatling-simulation-parse" "$@"
+exec java --add-opens=java.base/java.lang=ALL-UNNAMED -jar "$(dirname "$0")/gatling-app/target/gatling-simulation-parse.jar" "$@"
