@@ -52,9 +52,9 @@ plan*.md
 .bsp/scala-cli.json
 
 # scala-cli generated binaries and artifacts
-gatling-parser
-gatling-parser-native
-gatling-parser.jar
+glog
+glog-native
+glog.jar
 *.build_artifacts.txt
 
 # temporary CSV files and test outputs

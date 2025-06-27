@@ -17,13 +17,13 @@ format.
 2. Build the CLI
 
 ```sh
-scala-cli package gatling-parser.scala --native-image --power --output gatling-parser
+scala-cli package gatling-simulation-log-parser.scala --native-image --power --output glog
 ```
 
 3. Run it
 
 ```sh
-./gatling-parser simulation.log
+./glog simulation.log
 ```
 
 ## Development
@@ -33,20 +33,20 @@ scala-cli package gatling-parser.scala --native-image --power --output gatling-p
 Compile and test with JVM (fast iteration):
 
 ```sh
-scala-cli compile gatling-parser.scala
-scala-cli run gatling-parser.scala -- simulation.log
+scala-cli compile gatling-simulation-log-parser.scala
+scala-cli run gatling-simulation-log-parser.scala -- simulation.log
 ```
 
 Run tests:
 
 ```sh
-scala-cli test gatling-parser.scala
+scala-cli test gatling-simulation-log-parser.scala
 ```
 
 Format code:
 
 ```sh
-scala-cli fmt gatling-parser.scala
+scala-cli fmt gatling-simulation-log-parser.scala
 ```
 
 ## Building
@@ -56,11 +56,11 @@ scala-cli fmt gatling-parser.scala
 Build a self-contained native executable:
 
 ```sh
-scala-cli package gatling-parser.scala --native-image --power --output gatling-parser
+scala-cli package gatling-simulation-log-parser.scala --native-image --power --output glog
 ```
 
 This creates:
-- **Single executable file**: `gatling-parser` (~20MB)
+- **Single executable file**: `glog` (~20MB)
 - **No JVM dependency**: Runs on any compatible system
 - **Instant startup**: <10ms vs 2-3s for JVM
 - **Self-contained**: Like Go/Rust binaries
@@ -70,7 +70,7 @@ This creates:
 Build a standalone JAR:
 
 ```sh
-scala-cli package gatling-parser.scala --assembly --power --output gatling-parser.jar
+scala-cli package gatling-simulation-log-parser.scala --assembly --power --output glog.jar
 ```
 
 ## Running
@@ -78,13 +78,13 @@ scala-cli package gatling-parser.scala --assembly --power --output gatling-parse
 ### Native Binary (Recommended)
 
 ```sh
-./gatling-parser simulation.log
+./glog simulation.log
 ```
 
 ### JVM (if using JAR)
 
 ```sh
-java -jar gatling-parser.jar simulation.log
+java -jar glog.jar simulation.log
 ```
 
 ## Command Line Options
@@ -134,20 +134,20 @@ record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,en
 
 TODO release to GH
 
-1. Download the `gatling-parser` binary from releases
-2. Make it executable: `chmod +x gatling-parser`
-3. Run: `./gatling-parser simulation.log`
+1. Download the `glog` binary from releases
+2. Make it executable: `chmod +x glog`
+3. Run: `./glog simulation.log`
 
 ### Option 2: Build from Source
 
 1. Install Scala CLI
 2. Clone/download the source
-3. Build: `scala-cli package gatling-parser.scala --native-image --power --output gatling-parser`
-4. Run: `./gatling-parser simulation.log`
+3. Build: `scala-cli package gatling-simulation-log-parser.scala --native-image --power --output glog`
+4. Run: `./glog simulation.log`
 
 ### Option 3: Use JVM Version
 
 1. Install Java 17+
-2. Build JAR: `scala-cli package gatling-parser.scala --assembly --power --output gatling-parser.jar`
-3. Run: `java -jar gatling-parser.jar simulation.log`
+2. Build JAR: `scala-cli package gatling-simulation-log-parser.scala --assembly --power --output glog.jar`
+3. Run: `java -jar glog.jar simulation.log`
 
