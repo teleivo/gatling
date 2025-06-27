@@ -43,11 +43,11 @@ final case class RequestRecord(group: Option[Group], name: String, status: io.ga
 final case class GroupRecord(group: Group, duration: Int, cumulatedResponseTime: Int, status: io.gatling.commons.stats.Status, start: Long, startBucket: Int)
 final case class ErrorRecord(message: String, timestamp: Long)
 
-// RecordHeader values
+// RecordHeader values - must match Gatling's internal values
 object RecordHeader {
   object Run extends Enumeration { val value: Byte = 0 }
-  object User extends Enumeration { val value: Byte = 1 }
-  object Request extends Enumeration { val value: Byte = 2 }
+  object Request extends Enumeration { val value: Byte = 1 }
+  object User extends Enumeration { val value: Byte = 2 }
   object Group extends Enumeration { val value: Byte = 3 }
   object Error extends Enumeration { val value: Byte = 4 }
 }
@@ -254,6 +254,7 @@ private final class CsvRecordCollector(logFile: File, zoneId: ZoneId) extends Lo
       } catch {
         case e: EOFException =>
           logger.error(s"Log file is truncated after record $count, can only generate partial results.", e)
+          logger.debug(s"Records collected so far: ${allRecords.size}")
           continue = false
       }
     }
@@ -281,6 +282,9 @@ abstract class LogFileParser[T](logFile: File) extends AutoCloseable {
       ""
     } else {
       val value = is.readNBytes(length)
+      if (value.length < length) {
+        throw new EOFException(s"Expected $length bytes but got ${value.length}")
+      }
       val coder = readByte()
       try {
         StringInternals.newString(value, coder)
