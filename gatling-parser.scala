@@ -56,6 +56,26 @@ object GatlingParser extends StrictLogging {
 
   def main(args: Array[String]): Unit = {
     val (debugEnabled, logFilePath) = parseArgs(args)
+    
+    // Configure logging level based on debug flag
+    if (debugEnabled) {
+      // Set root logger to DEBUG level
+      try {
+        import ch.qos.logback.classic.{ Level, Logger }
+        import org.slf4j.LoggerFactory
+        val rootLogger = LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME).asInstanceOf[Logger]
+        rootLogger.setLevel(Level.DEBUG)
+        
+        // Also set our logger specifically
+        val ourLogger = LoggerFactory.getLogger("GatlingParser").asInstanceOf[Logger]
+        ourLogger.setLevel(Level.DEBUG)
+        
+      } catch {
+        case e: Exception =>
+          System.err.println(s"Warning: Could not configure logback logger: ${e.getMessage}")
+          System.err.println("Debug logging enabled (fallback mode)")
+      }
+    }
 
     val logFile = new File(logFilePath).getAbsoluteFile
 
@@ -75,7 +95,7 @@ object GatlingParser extends StrictLogging {
       // Create a minimal configuration just for parsing - avoid loading full HTTP configuration
       val zoneId = ZoneId.systemDefault()
       // Use Gatling's internal deserializer by extending LogFileParser
-      val records = Using.resource(new CsvRecordCollector(logFile, zoneId))(_.parse())
+      val records = Using.resource(new CsvRecordCollector(logFile, zoneId, debugEnabled))(_.parse())
       outputCsv(records)
     } match {
       case Success(_) => // Success, CSV written to stdout
@@ -145,17 +165,23 @@ object GatlingParser extends StrictLogging {
 final case class AllRecords(allRecords: List[Either[UserRecord, Either[RequestRecord, Either[GroupRecord, ErrorRecord]]]])
 
 // Custom parser that extends Gatling's LogFileParser to collect records instead of processing them
-private final class CsvRecordCollector(logFile: File, zoneId: ZoneId) extends LogFileParser[AllRecords](logFile) with StrictLogging {
+private final class CsvRecordCollector(logFile: File, zoneId: ZoneId, debugEnabled: Boolean = false) extends LogFileParser[AllRecords](logFile) with StrictLogging {
 
   private val allRecords = mutable.ListBuffer[Either[UserRecord, Either[RequestRecord, Either[GroupRecord, ErrorRecord]]]]()
   private var runStart: Long = 0L
   private var scenarios: Array[String] = Array.empty
+  
+  private def debugLog(message: String): Unit = {
+    if (debugEnabled) {
+      System.err.println(s"[DEBUG] $message")
+    }
+  }
 
   private def parseRunRecord(): Unit = {
     val gatlingVersion = readString()
     // Log version information for debugging
+    debugLog(s"Log file was generated with Gatling $gatlingVersion")
     logger.info(s"Log file was generated with Gatling $gatlingVersion")
-    logger.info("Parsing with custom parser (version check skipped for native image)")
     // Version check is relaxed to allow parsing logs from stable releases with SNAPSHOT versions
     // This is safe because we're using Gatling's internal deserializer
 
@@ -240,7 +266,10 @@ private final class CsvRecordCollector(logFile: File, zoneId: ZoneId) extends Lo
     var continue = true
     while (continue) {
       count += 1
-      if (count % 10000 == 0) logger.info(s"Processed $count records")
+      if (count % 10000 == 0) {
+        debugLog(s"Processed $count records")
+        logger.info(s"Processed $count records")
+      }
       val headerValue = read().toByte
       try {
         headerValue match {
@@ -259,6 +288,7 @@ private final class CsvRecordCollector(logFile: File, zoneId: ZoneId) extends Lo
       }
     }
 
+    debugLog(s"Parsing complete: processed $count records")
     logger.info(s"Parsing complete: processed $count records")
     AllRecords(allRecords.toList)
   }

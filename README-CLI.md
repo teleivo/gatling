@@ -1,7 +1,7 @@
 # Gatling Log Parser CLI
 
 A fast, self-contained command-line tool to turn Gatling binary `simulation.log` files (starting
-with [3.12+](https://github.com/gatling/gatling/issues/4596)) into CSV.
+with [3.12+](https://github.com/gatling/gatling/issues/4596)) into a CSV.
 
 ## Overview
 
@@ -16,15 +16,15 @@ format.
 
 2. Build the CLI
 
-   ```sh
-   scala-cli package gatling-parser.scala --native-image --power --output gatling-parser
-   ```
+```sh
+scala-cli package gatling-parser.scala --native-image --power --output gatling-parser
+```
 
 3. Run it
 
-   ```sh
-   ./gatling-parser simulation.log
-   ```
+```sh
+./gatling-parser simulation.log
+```
 
 ## Development
 
