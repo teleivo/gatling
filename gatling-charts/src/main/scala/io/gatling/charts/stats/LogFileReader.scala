@@ -36,7 +36,7 @@ import com.typesafe.scalalogging.StrictLogging
 import io.github.metarank.cfor._
 
 object LogFileParser {
-  val LogStep = 100000
+  val LogStep: Int = 100000
 }
 
 abstract class LogFileParser[T](logFile: File) extends AutoCloseable {

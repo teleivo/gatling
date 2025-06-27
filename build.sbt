@@ -43,7 +43,8 @@ lazy val root = Project("gatling-parent", file("."))
     charts,
     app,
     recorder,
-    testFramework
+    testFramework,
+    logParserCli
   )
   .settings(basicSettings)
   .settings(skipPublishing)
@@ -142,3 +143,6 @@ lazy val testFramework = gatlingModule("gatling-test-framework")
   .disablePlugins(SbtSpotless)
   .dependsOn(app)
   .settings(libraryDependencies ++= testFrameworkDependencies)
+
+lazy val logParserCli = gatlingModule("gatling-log-parser-cli")
+  .dependsOn(charts % "compile->compile;test->test", app % "compile->compile")

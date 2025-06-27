@@ -1,90 +1,80 @@
 # Gatling Log Parser CLI
 
-A fast, self-contained command-line tool to turn Gatling binary `simulation.log` files (starting
+A fast command-line tool to turn Gatling binary `simulation.log` files (starting
 with [3.12+](https://github.com/gatling/gatling/issues/4596)) into a CSV.
 
 ## Overview
 
 This CLI uses Gatling's internal binary log parser to extract all performance test data from
-`simulation.log` files and outputs it as CSV to stdout. Built with Scala CLI and GraalVM Native
-Image, it provides instant startup times while maintaining compatibility with Gatling's internal
-format.
+`simulation.log` files and outputs it as CSV to stdout. Built as an integrated SBT module,
+it uses Gatling's internal LogFileReader for maximum compatibility and performance.
 
 ## Quick Start
 
-1. Install [Scala CLI](https://scala-cli.virtuslab.org/)
-
-2. Build the CLI
+1. Run the CLI directly with SBT
 
 ```sh
-scala-cli package GatlingSimulationLogParser.scala --native-image --power --output glog
+sbt "project gatling-log-parser-cli" "run simulation.log"
 ```
 
-3. Run it
+2. For production use, build a package JAR first
 
 ```sh
-./glog simulation.log
+sbt "project gatling-log-parser-cli" package
+java -cp "gatling-log-parser-cli/target/scala-2.13/gatling-log-parser-cli*.jar:$(sbt --error 'export gatling-log-parser-cli/Runtime/fullClasspath' | tail -1)" io.gatling.logparser.GatlingLogParserCli simulation.log
 ```
 
 ## Development
 
 ### Building for Development
 
-Compile and test with JVM (fast iteration):
+Compile and test with SBT (fast iteration):
 
 ```sh
-scala-cli compile GatlingSimulationLogParser.scala
-scala-cli run GatlingSimulationLogParser.scala -- simulation.log
+sbt "project gatling-log-parser-cli" compile
+sbt "project gatling-log-parser-cli" run simulation.log
 ```
 
 Run tests:
 
 ```sh
-scala-cli test GatlingSimulationLogParser.scala
+sbt "project gatling-log-parser-cli" test
 ```
 
-Format code:
+Format code (automatic during compilation):
 
 ```sh
-scala-cli fmt GatlingSimulationLogParser.scala
+sbt "project gatling-log-parser-cli" spotlessApply
 ```
 
 ## Building
 
-### Native Binary (Recommended for Distribution)
+### JAR (For Distribution)
 
-Build a self-contained native executable:
+Build a package JAR:
 
 ```sh
-scala-cli package GatlingSimulationLogParser.scala --native-image --power --output glog
+sbt "project gatling-log-parser-cli" package
 ```
 
 This creates:
-- **Single executable file**: `glog` (~20MB)
-- **No JVM dependency**: Runs on any compatible system
-- **Instant startup**: <10ms vs 2-3s for JVM
-- **Self-contained**: Like Go/Rust binaries
-
-### JAR (For JVM environments)
-
-Build a standalone JAR:
-
-```sh
-scala-cli package GatlingSimulationLogParser.scala --assembly --power --output glog.jar
-```
+- **JAR file**: `gatling-log-parser-cli/target/scala-2.13/gatling-log-parser-cli-*.jar`
+- **Integrated**: Uses Gatling's internal components directly
+- **Dependencies**: Requires Gatling dependencies on classpath
 
 ## Running
 
-### Native Binary (Recommended)
+### Using SBT (Recommended)
 
 ```sh
-./glog simulation.log
+sbt "project gatling-log-parser-cli" "run simulation.log"
 ```
 
-### JVM (if using JAR)
+### Using the JAR (Advanced)
 
 ```sh
-java -jar glog.jar simulation.log
+sbt "project gatling-log-parser-cli" package
+java -cp "gatling-log-parser-cli/target/scala-2.13/gatling-log-parser-cli*.jar:$(sbt --error 'export gatling-log-parser-cli/Runtime/fullClasspath' | tail -1)" io.gatling.logparser.GatlingLogParserCli simulation.log
 ```
 
 ## Command Line Options
@@ -130,24 +120,16 @@ record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,en
 
 ## Installation
 
-### Option 1: Download Pre-built Binary
+### Option 1: Use SBT directly (Recommended)
 
-TODO release to GH
+1. Install SBT and Java 17+
+2. Clone the Gatling repository  
+3. Run: `sbt "project gatling-log-parser-cli" "run simulation.log"`
 
-1. Download the `glog` binary from releases
-2. Make it executable: `chmod +x glog`
-3. Run: `./glog simulation.log`
+### Option 2: Build JAR from Source
 
-### Option 2: Build from Source
-
-1. Install Scala CLI
-2. Clone/download the source
-3. Build: `scala-cli package GatlingSimulationLogParser.scala --native-image --power --output glog`
-4. Run: `./glog simulation.log`
-
-### Option 3: Use JVM Version
-
-1. Install Java 17+
-2. Build JAR: `scala-cli package GatlingSimulationLogParser.scala --assembly --power --output glog.jar`
-3. Run: `java -jar glog.jar simulation.log`
+1. Install SBT and Java 17+
+2. Clone the Gatling repository
+3. Build: `sbt "project gatling-log-parser-cli" package`
+4. Run: `java -cp "gatling-log-parser-cli/target/scala-2.13/gatling-log-parser-cli*.jar:$(sbt --error 'export gatling-log-parser-cli/Runtime/fullClasspath' | tail -1)" io.gatling.logparser.GatlingLogParserCli simulation.log`
 
