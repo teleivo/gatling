@@ -35,7 +35,7 @@ import io.gatling.core.stats.writer._
 import com.typesafe.scalalogging.StrictLogging
 import io.github.metarank.cfor._
 
-private object LogFileParser {
+object LogFileParser {
   val LogStep = 100000
 }
 

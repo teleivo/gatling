@@ -16,12 +16,12 @@
 
 package io.gatling.core.stats.writer
 
-private[gatling] object RecordHeader {
-  private[gatling] object Run extends RecordHeader(0)
-  private[gatling] object Request extends RecordHeader(1)
-  private[gatling] object User extends RecordHeader(2)
-  private[gatling] object Group extends RecordHeader(3)
-  private[gatling] object Error extends RecordHeader(4)
+object RecordHeader {
+  object Run extends RecordHeader(0)
+  object Request extends RecordHeader(1)
+  object User extends RecordHeader(2)
+  object Group extends RecordHeader(3)
+  object Error extends RecordHeader(4)
 }
 
-private[gatling] sealed abstract class RecordHeader(val value: Byte)
+sealed abstract class RecordHeader(val value: Byte)
