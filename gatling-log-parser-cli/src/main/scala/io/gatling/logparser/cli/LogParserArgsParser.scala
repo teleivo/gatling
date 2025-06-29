@@ -23,13 +23,13 @@ final class LogParserArgsParser(args: Array[String]) {
 
   def parseArguments: Either[LogParserArgs, StatusCode] =
     args.toList match {
-      case "--debug" :: logFile :: Nil => Left(LogParserArgs(logFile, debugEnabled = true))
-      case logFile :: "--debug" :: Nil => Left(LogParserArgs(logFile, debugEnabled = true))
+      case "--debug" :: logFile :: Nil                => Left(LogParserArgs(logFile, debugEnabled = true))
+      case logFile :: "--debug" :: Nil                => Left(LogParserArgs(logFile, debugEnabled = true))
       case logFile :: Nil if !logFile.startsWith("-") => Left(LogParserArgs(logFile, debugEnabled = false))
-      case "--help" :: _               => printUsageAndExit()
-      case "-h" :: _                   => printUsageAndExit()
-      case Nil                         => printUsageAndExit()
-      case _                           => printUsageAndExit()
+      case "--help" :: _                              => printUsageAndExit()
+      case "-h" :: _                                  => printUsageAndExit()
+      case Nil                                        => printUsageAndExit()
+      case _                                          => printUsageAndExit()
     }
 
   private def printUsageAndExit(): Either[LogParserArgs, StatusCode] = {

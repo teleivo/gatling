@@ -62,17 +62,17 @@ object GatlingLogParserCli extends StrictLogging {
               System.err.println(s"[DEBUG] StringInternals not available: ${e.getMessage}")
             }
         }
-        
+
         val configuration = GatlingConfiguration.loadForTest()
         val records = Using.resource(new RecordCollectingParser(logFile, configuration, args.debugEnabled))(_.parse())
-        
+
         if (args.debugEnabled) {
           System.err.println(s"[DEBUG] Parsed log file with ${records.requestRecords.size} request records")
           System.err.println(s"[DEBUG] ${records.userRecords.size} user records")
           System.err.println(s"[DEBUG] ${records.groupRecords.size} group records")
           System.err.println(s"[DEBUG] ${records.errorRecords.size} error records")
         }
-        
+
         outputCsv(records)
       } match {
         case Success(_) => 0
@@ -141,22 +141,21 @@ final case class CollectedRecords(
     errorRecords: List[ErrorRecord]
 )
 
-private final class RecordCollectingParser(logFile: File, configuration: GatlingConfiguration, debugEnabled: Boolean) 
+private final class RecordCollectingParser(logFile: File, configuration: GatlingConfiguration, debugEnabled: Boolean)
     extends SafeLogFileParser[CollectedRecords](logFile) {
 
   private val userRecords = mutable.ListBuffer[UserRecord]()
   private val requestRecords = mutable.ListBuffer[RequestRecord]()
   private val groupRecords = mutable.ListBuffer[GroupRecord]()
   private val errorRecords = mutable.ListBuffer[ErrorRecord]()
-  
+
   private var runStart: Long = 0L
   private var scenarios: Array[String] = Array.empty
 
-  private def debugLog(message: String): Unit = {
+  private def debugLog(message: String): Unit =
     if (debugEnabled) {
       System.err.println(s"[DEBUG] $message")
     }
-  }
 
   private def parseRunRecord(): Unit = {
     val gatlingVersion = readString()
