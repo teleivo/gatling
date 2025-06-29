@@ -1,12 +1,12 @@
 # Gatling Log Parser CLI
 
 A fast command-line tool to turn Gatling binary `simulation.log` files (starting
-with [3.12+](https://github.com/gatling/gatling/issues/4596)) into a CSV.
+with [3.12+](https://github.com/gatling/gatling/issues/4596)) into a CSV file.
 
 ## Overview
 
 This CLI uses Gatling's internal binary log parser to extract all performance test data from
-`simulation.log` files and outputs it as CSV to stdout. Built as an integrated SBT module,
+`simulation.log` files and outputs it as CSV to a file next to the original log file. Built as an integrated SBT module,
 it uses Gatling's internal LogFileReader for maximum compatibility and performance.
 
 ## Quick Start
@@ -79,12 +79,12 @@ java -cp "gatling-log-parser-cli/target/scala-2.13/gatling-log-parser-cli*.jar:$
 
 ## Command Line Options
 
-- `--debug`: Enable debug logging output. By default, only clean CSV data is output to stdout.
+- `--debug`: Enable debug logging output. By default, only essential log messages are shown.
 - `<simulation.log>`: Path to the Gatling binary simulation log file
 
 ## Output Format
 
-The CLI outputs CSV data with the following schema:
+The CLI creates a CSV file next to the input simulation.log file (e.g., `simulation.csv` for `simulation.log`) with the following schema:
 
 ### CSV Headers
 ```

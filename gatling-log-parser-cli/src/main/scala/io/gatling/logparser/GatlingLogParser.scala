@@ -16,7 +16,7 @@
 
 package io.gatling.logparser
 
-import java.io.File
+import java.io.{ File, PrintWriter }
 
 import io.gatling.charts.stats._
 import io.gatling.commons.stats.{ KO, OK }
@@ -57,48 +57,58 @@ object GatlingLogParser extends StrictLogging {
       val configuration = GatlingConfiguration.loadForTest()
       val logFileReader = new LogFileReader(logFile, configuration)
       val records = logFileReader.parseRaw()
-      outputCsv(records)
+
+      // Create output file path next to the simulation.log
+      val outputFile = new File(logFile.getParentFile, logFile.getName.replaceAll("\\.log$", ".csv"))
+      logger.info(s"Writing CSV output to: ${outputFile.getAbsolutePath}")
+
+      outputCsv(records, outputFile)
       0
     }
   }
 
-  private def outputCsv(records: CollectedRecords): Unit = {
-    // Print CSV header
-    println(
-      "record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,end_timestamp,response_time_ms,error_message,event_type,duration_ms,cumulated_response_time_ms,is_incoming"
-    )
-
-    // Output user records
-    records.userRecords.foreach { userRecord =>
-      val eventType = if (userRecord.event == MessageEvent.Start) "start" else "end"
-      println(s"user,${escapeCsv(userRecord.scenario)},,,,${userRecord.timestamp},,,,$eventType,,,")
-    }
-
-    // Output request records
-    records.requestRecords.foreach { requestRecord =>
-      val groupHierarchy = requestRecord.group.map(_.hierarchy.mkString("|")).getOrElse("")
-      val status = if (requestRecord.status == OK) "OK" else "KO"
-      val errorMessage = requestRecord.errorMessage.getOrElse("")
-      val isIncoming = requestRecord.incoming.toString
-      val endTimestamp = if (requestRecord.incoming) "" else (requestRecord.start + requestRecord.responseTime).toString
-      println(
-        s"request,,${escapeCsv(groupHierarchy)},${escapeCsv(requestRecord.name)},$status,${requestRecord.start},$endTimestamp,${requestRecord.responseTime},${escapeCsv(errorMessage)},,,,$isIncoming"
+  private def outputCsv(records: CollectedRecords, outputFile: File): Unit = {
+    val writer = new PrintWriter(outputFile)
+    try {
+      // Write CSV header
+      writer.println(
+        "record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,end_timestamp,response_time_ms,error_message,event_type,duration_ms,cumulated_response_time_ms,is_incoming"
       )
-    }
 
-    // Output group records
-    records.groupRecords.foreach { groupRecord =>
-      val groupHierarchy = groupRecord.group.hierarchy.mkString("|")
-      val status = if (groupRecord.status == OK) "OK" else "KO"
-      val endTimestamp = groupRecord.start + groupRecord.duration
-      println(
-        s"group,,${escapeCsv(groupHierarchy)},,$status,${groupRecord.start},$endTimestamp,,,,${groupRecord.duration},${groupRecord.cumulatedResponseTime},"
-      )
-    }
+      // Output user records
+      records.userRecords.foreach { userRecord =>
+        val eventType = if (userRecord.event == MessageEvent.Start) "start" else "end"
+        writer.println(s"user,${escapeCsv(userRecord.scenario)},,,,${userRecord.timestamp},,,,$eventType,,,")
+      }
 
-    // Output error records
-    records.errorRecords.foreach { errorRecord =>
-      println(s"error,,,,,${errorRecord.timestamp},,${escapeCsv(errorRecord.message)},,,,")
+      // Output request records
+      records.requestRecords.foreach { requestRecord =>
+        val groupHierarchy = requestRecord.group.map(_.hierarchy.mkString("|")).getOrElse("")
+        val status = if (requestRecord.status == OK) "OK" else "KO"
+        val errorMessage = requestRecord.errorMessage.getOrElse("")
+        val isIncoming = requestRecord.incoming.toString
+        val endTimestamp = if (requestRecord.incoming) "" else (requestRecord.start + requestRecord.responseTime).toString
+        writer.println(
+          s"request,,${escapeCsv(groupHierarchy)},${escapeCsv(requestRecord.name)},$status,${requestRecord.start},$endTimestamp,${requestRecord.responseTime},${escapeCsv(errorMessage)},,,,$isIncoming"
+        )
+      }
+
+      // Output group records
+      records.groupRecords.foreach { groupRecord =>
+        val groupHierarchy = groupRecord.group.hierarchy.mkString("|")
+        val status = if (groupRecord.status == OK) "OK" else "KO"
+        val endTimestamp = groupRecord.start + groupRecord.duration
+        writer.println(
+          s"group,,${escapeCsv(groupHierarchy)},,$status,${groupRecord.start},$endTimestamp,,,,${groupRecord.duration},${groupRecord.cumulatedResponseTime},"
+        )
+      }
+
+      // Output error records
+      records.errorRecords.foreach { errorRecord =>
+        writer.println(s"error,,,,,${errorRecord.timestamp},,${escapeCsv(errorRecord.message)},,,,")
+      }
+    } finally {
+      writer.close()
     }
   }
 
