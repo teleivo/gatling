@@ -119,10 +119,11 @@ private final class FirstPassParser(logFile: File, zoneId: ZoneId) extends LogFi
 
   private def parseRunRecord(): (RunMessage, Array[String], List[Assertion]) = {
     val gatlingVersion = readString()
-    assert(
-      gatlingVersion == GatlingVersion.ThisVersion.fullVersion,
-      s"The log file $logFile was generated with Gatling $gatlingVersion and can't be parsed with Gatling ${GatlingVersion.ThisVersion.fullVersion}"
-    )
+    // TODO(ivo) ok for now but if we were to use this we would need a different strategy
+//    assert(
+//      gatlingVersion == GatlingVersion.ThisVersion.fullVersion,
+//      s"The log file $logFile was generated with Gatling $gatlingVersion and can't be parsed with Gatling ${GatlingVersion.ThisVersion.fullVersion}"
+//    )
 
     val localRunMessage = RunMessage(
       gatlingVersion = gatlingVersion,
