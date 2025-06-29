@@ -17,9 +17,13 @@
 package io.gatling.logparser
 
 import java.io.File
+
 import io.gatling.charts.stats._
+import io.gatling.commons.stats.{ KO, OK }
 import io.gatling.core.config.GatlingConfiguration
-import io.gatling.logparser.cli.{LogParserArgs, LogParserArgsParser}
+import io.gatling.core.stats.message.MessageEvent
+import io.gatling.logparser.cli.{ LogParserArgs, LogParserArgsParser }
+
 import com.typesafe.scalalogging.StrictLogging
 
 object GatlingLogParser extends StrictLogging {
@@ -37,15 +41,22 @@ object GatlingLogParser extends StrictLogging {
 
   private def run(args: LogParserArgs): Int = {
     val logFile = new File(args.logFilePath).getAbsoluteFile
+    logger.info(s"Looking for log file at: ${logFile.getAbsolutePath}")
 
     if (!logFile.exists()) {
       System.err.println(s"File not found: ${args.logFilePath}")
+      System.err.println(s"Absolute path: ${logFile.getAbsolutePath}")
       1
     } else {
-      io.gatling.core.stats.writer.StringInternals.checkAvailability() // Ensure method handle is initialized
+      try {
+        io.gatling.core.stats.writer.StringInternals.checkAvailability() // Ensure method handle is initialized
+      } catch {
+        case e: IllegalAccessException =>
+          logger.warn("Could not initialize StringInternals due to module access restrictions. Continuing anyway.", e)
+      }
       val configuration = GatlingConfiguration.loadForTest()
-      val data = new LogFileReader(logFile, configuration).read()
-      val resultsHolder = data.resultsHolder
+      val logFileReader = new LogFileReader(logFile, configuration)
+      val records = logFileReader.parseRaw()
       outputCsv(records)
       0
     }
@@ -98,7 +109,3 @@ object GatlingLogParser extends StrictLogging {
       value
     }
 }
-}
-}
-
-

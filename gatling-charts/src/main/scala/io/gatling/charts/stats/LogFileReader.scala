@@ -35,6 +35,13 @@ import io.gatling.core.stats.writer._
 import com.typesafe.scalalogging.StrictLogging
 import io.github.metarank.cfor._
 
+final case class CollectedRecords(
+    userRecords: List[UserRecord],
+    requestRecords: List[RequestRecord],
+    groupRecords: List[GroupRecord],
+    errorRecords: List[ErrorRecord]
+)
+
 object LogFileParser {
   val LogStep: Int = 100000
 }
@@ -57,7 +64,19 @@ abstract class LogFileParser[T](logFile: File) extends AutoCloseable {
     } else {
       val value = is.readNBytes(length)
       val coder = readByte()
-      StringInternals.newString(value, coder)
+      try {
+        StringInternals.newString(value, coder)
+      } catch {
+        case _: NullPointerException =>
+          // Fallback when StringInternals is not available (missing --add-opens flag)
+          if (coder == 0) {
+            // LATIN1 encoding
+            new String(value, java.nio.charset.StandardCharsets.ISO_8859_1)
+          } else {
+            // UTF16 encoding
+            new String(value, java.nio.charset.StandardCharsets.UTF_16LE)
+          }
+      }
     }
   }
   private def sanitize(s: String): String = s.replaceIf(c => c == '\n' || c == '\r' || c == '\t', ' ')
@@ -394,5 +413,136 @@ final class LogFileReader(logFile: File, configuration: GatlingConfiguration) ex
     )(_.parse())
 
     new LogFileData(runInfo, resultsHolder, step)
+  }
+
+  def parseRaw(): CollectedRecords = {
+    val runInfo = Using.resource(new FirstPassParser(logFile, configuration.data.zoneId))(_.parse())
+    Using.resource(new RawRecordsParser(logFile, runInfo))(_.parse())
+  }
+}
+
+private final class RawRecordsParser(logFile: File, runInfo: RunInfo) extends LogFileParser[CollectedRecords](logFile) with StrictLogging {
+
+  import scala.collection.mutable.ListBuffer
+
+  private val userRecords = ListBuffer[UserRecord]()
+  private val requestRecords = ListBuffer[RequestRecord]()
+  private val groupRecords = ListBuffer[GroupRecord]()
+  private val errorRecords = ListBuffer[ErrorRecord]()
+
+  private def skipRunRecord(): Unit = {
+    // header
+    skipByte()
+    // gatlingVersion
+    skipString()
+    // simulationClassName
+    skipString()
+    // start
+    skipLong()
+    // runDescription
+    skipString()
+    // scenarios
+    val scenariosSize = readInt()
+    cfor(0 until scenariosSize)(_ => skipString())
+    // assertions
+    val assertionsSize = readInt()
+    cfor(0 until assertionsSize)(_ => skip(readInt()))
+  }
+
+  private def parseUserRecord(): UserRecord =
+    UserRecord(
+      scenario = runInfo.scenarios(readInt()),
+      event = if (readBoolean()) MessageEvent.Start else MessageEvent.End,
+      timestamp = readInt() + runInfo.runStart
+    )
+
+  private def parseRequestRecord(): RequestRecord = {
+    val groupsSize = readInt()
+    val group = Option.when(groupsSize > 0)(Group(List.fill(groupsSize)(readCachedSanitizedString())))
+    val name = readCachedSanitizedString()
+    val startTimestamp = readInt() + runInfo.runStart
+    val endTimestamp = readInt() + runInfo.runStart
+    val status = if (readBoolean()) OK else KO
+    val errorMessage = readCachedSanitizedString().trimToOption
+
+    val responseTime = if (endTimestamp != Long.MinValue) {
+      (endTimestamp - startTimestamp).toInt
+    } else {
+      0
+    }
+
+    RequestRecord(
+      group,
+      name,
+      status,
+      startTimestamp,
+      0, // startBucket not needed for raw output
+      0, // endBucket not needed for raw output
+      responseTime,
+      errorMessage,
+      incoming = endTimestamp == Long.MinValue
+    )
+  }
+
+  private def parseGroupRecord(): GroupRecord = {
+    val groupsSize = readInt()
+    val group = Group(List.fill(groupsSize)(readCachedSanitizedString()))
+    val startTimestamp = readInt() + runInfo.runStart
+    val endTimestamp = readInt() + runInfo.runStart
+    val cumulatedResponseTime = readInt()
+    val status = if (readBoolean()) OK else KO
+
+    GroupRecord(
+      group,
+      (endTimestamp - startTimestamp).toInt,
+      cumulatedResponseTime,
+      status,
+      startTimestamp,
+      0 // startBucket not needed for raw output
+    )
+  }
+
+  private def parseErrorRecord(): ErrorRecord = {
+    val message = readCachedSanitizedString()
+    val timestamp = readInt() + runInfo.runStart
+    ErrorRecord(message, timestamp)
+  }
+
+  override def parse(): CollectedRecords = {
+    logger.info("Parsing raw records")
+
+    skipRunRecord()
+
+    var count = 1
+    var continue = true
+    while (continue) {
+      count += 1
+      if (count % LogFileParser.LogStep == 0) logger.info(s"Parsing raw records, read $count records")
+      val headerValue = read().toByte
+
+      try {
+        headerValue match {
+          case RecordHeader.User.value    => userRecords += parseUserRecord()
+          case RecordHeader.Request.value => requestRecords += parseRequestRecord()
+          case RecordHeader.Group.value   => groupRecords += parseGroupRecord()
+          case RecordHeader.Error.value   => errorRecords += parseErrorRecord()
+          case -1                         => continue = false
+          case _                          => throw new UnsupportedOperationException(s"Unsupported header $headerValue for record $count")
+        }
+      } catch {
+        case e: EOFException =>
+          logger.error(s"Log file is truncated after record $count, can only generate partial results.", e)
+          continue = false
+      }
+    }
+
+    logger.info(s"Raw records parsing done: read $count records")
+
+    CollectedRecords(
+      userRecords.toList,
+      requestRecords.toList,
+      groupRecords.toList,
+      errorRecords.toList
+    )
   }
 }
