@@ -17,7 +17,13 @@ it uses Gatling's internal LogFileReader for maximum compatibility and performan
 sbt "project gatling-log-parser-cli" "run simulation.log"
 ```
 
-2. For production use, build a package JAR first
+2. Process multiple simulation.log files in subdirectories
+
+```sh
+sbt "project gatling-log-parser-cli" "run --scan-subdirs /path/to/results/"
+```
+
+3. For production use, build a package JAR first
 
 ```sh
 sbt "project gatling-log-parser-cli" package
@@ -66,8 +72,14 @@ This creates:
 
 ### Using SBT (Recommended)
 
+**Single file:**
 ```sh
 sbt "project gatling-log-parser-cli" "run simulation.log"
+```
+
+**Directory with subdirectories:**
+```sh
+sbt "project gatling-log-parser-cli" "run --scan-subdirs /path/to/results/"
 ```
 
 ### Using the JAR (Advanced)
@@ -80,7 +92,8 @@ java -cp "gatling-log-parser-cli/target/scala-2.13/gatling-log-parser-cli*.jar:$
 ## Command Line Options
 
 - `--debug`: Enable debug logging output. By default, only essential log messages are shown.
-- `<simulation.log>`: Path to the Gatling binary simulation log file
+- `--scan-subdirs`: Scan immediate subdirectories for simulation.log files when the input is a directory without a direct simulation.log file.
+- `<path>`: Path to simulation.log file or directory to scan
 
 ## Output Format
 
@@ -125,6 +138,42 @@ record_type,scenario_name,group_hierarchy,request_name,status,start_timestamp,en
 1. Install SBT and Java 17+
 2. Clone the Gatling repository  
 3. Run: `sbt "project gatling-log-parser-cli" "run simulation.log"`
+
+## Usage Examples
+
+**Process a single simulation.log file:**
+```sh
+sbt "project gatling-log-parser-cli" "run /path/to/simulation.log"
+```
+
+**Process a directory containing simulation.log:**
+```sh
+sbt "project gatling-log-parser-cli" "run /path/to/gatling-results/"
+```
+
+**Process all simulation.log files in subdirectories:**
+```sh
+sbt "project gatling-log-parser-cli" "run --scan-subdirs /path/to/results/"
+```
+
+**Use case: Multiple test runs**
+If you have a directory structure like:
+```
+results/
+├── run1/
+│   └── simulation.log
+├── run2/
+│   └── simulation.log
+└── run3/
+    └── simulation.log
+```
+
+Use `--scan-subdirs` to process all runs at once:
+```sh
+sbt "project gatling-log-parser-cli" "run --scan-subdirs results/"
+```
+
+This will create `simulation.csv` files next to each `simulation.log` file.
 
 ### Option 2: Build JAR from Source
 

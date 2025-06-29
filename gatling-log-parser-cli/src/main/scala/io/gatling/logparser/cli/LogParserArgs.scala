@@ -18,5 +18,6 @@ package io.gatling.logparser.cli
 
 final case class LogParserArgs(
     logFilePath: String,
-    debugEnabled: Boolean
+    debugEnabled: Boolean,
+    scanSubdirs: Boolean
 )

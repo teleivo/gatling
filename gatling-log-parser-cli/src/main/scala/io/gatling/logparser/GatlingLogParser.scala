@@ -40,35 +40,91 @@ object GatlingLogParser extends StrictLogging {
   }
 
   private def run(args: LogParserArgs): Int = {
-    val logFile = new File(args.logFilePath).getAbsoluteFile
-    logger.info(s"Looking for log file at: ${logFile.getAbsolutePath}")
+    val inputPath = new File(args.logFilePath).getAbsoluteFile
 
-    if (!logFile.exists()) {
-      System.err.println(s"File not found: ${args.logFilePath}")
-      System.err.println(s"Absolute path: ${logFile.getAbsolutePath}")
+    if (!inputPath.exists()) {
+      System.err.println(s"Path not found: ${args.logFilePath}")
+      System.err.println(s"Absolute path: ${inputPath.getAbsolutePath}")
       1
     } else {
-      try {
-        io.gatling.core.stats.writer.StringInternals.checkAvailability() // Ensure method handle is initialized
-      } catch {
-        case e: IllegalAccessException =>
-          logger.warn("Could not initialize StringInternals due to module access restrictions. Continuing anyway.", e)
-      }
-      val configuration = GatlingConfiguration.loadForTest()
-      val logFileReader = new LogFileReader(logFile, configuration)
-      val records = logFileReader.parseRaw()
+      val logFilesResult = if (inputPath.isFile) {
+        // Single file provided
+        Right(List(inputPath))
+      } else if (inputPath.isDirectory) {
+        // Directory provided
+        val directSimulationLog = new File(inputPath, "simulation.log")
+        if (directSimulationLog.exists()) {
+          // Directory contains simulation.log directly
+          Right(List(directSimulationLog))
+        } else if (args.scanSubdirs) {
+          // Scan subdirectories for simulation.log files
+          val subdirs = inputPath.listFiles().filter(_.isDirectory)
+          val foundLogs = subdirs.flatMap { subdir =>
+            val simulationLog = new File(subdir, "simulation.log")
+            if (simulationLog.exists()) Some(simulationLog) else None
+          }.toList
 
-      // Create output file path next to the simulation.log
-      val outputFile = new File(logFile.getParentFile, logFile.getName.replaceAll("\\.log$", ".csv"))
-      logger.info(s"Writing CSV output to: ${outputFile.getAbsolutePath}")
-
-      val writer = new PrintWriter(new FileWriter(outputFile))
-      try {
-        outputCsv(records, writer)
-      } finally {
-        writer.close()
+          if (foundLogs.isEmpty) {
+            System.err.println(s"No simulation.log files found in subdirectories of: ${inputPath.getAbsolutePath}")
+            Left(1)
+          } else {
+            logger.info(s"Found ${foundLogs.length} simulation.log files in subdirectories")
+            Right(foundLogs)
+          }
+        } else {
+          System.err.println(s"Directory does not contain simulation.log: ${inputPath.getAbsolutePath}")
+          System.err.println("Use --scan-subdirs to scan immediate subdirectories")
+          Left(1)
+        }
+      } else {
+        System.err.println(s"Path is neither a file nor a directory: ${inputPath.getAbsolutePath}")
+        Left(1)
       }
-      0
+
+      logFilesResult match {
+        case Left(errorCode) => errorCode
+        case Right(logFiles) =>
+          try {
+            io.gatling.core.stats.writer.StringInternals.checkAvailability() // Ensure method handle is initialized
+          } catch {
+            case e: IllegalAccessException =>
+              logger.warn("Could not initialize StringInternals due to module access restrictions. Continuing anyway.", e)
+          }
+
+          val configuration = GatlingConfiguration.loadForTest()
+          var processedCount = 0
+          var failedCount = 0
+
+          logFiles.foreach { logFile =>
+            try {
+              logger.info(s"Processing: ${logFile.getAbsolutePath}")
+              val logFileReader = new LogFileReader(logFile, configuration)
+              val records = logFileReader.parseRaw()
+
+              // Create output file path next to the simulation.log
+              val outputFile = new File(logFile.getParentFile, logFile.getName.replaceAll("\\.log$", ".csv"))
+              logger.info(s"Writing CSV output to: ${outputFile.getAbsolutePath}")
+
+              val writer = new PrintWriter(new FileWriter(outputFile))
+              try {
+                outputCsv(records, writer)
+                processedCount += 1
+              } finally {
+                writer.close()
+              }
+            } catch {
+              case e: Exception =>
+                System.err.println(s"Failed to process ${logFile.getAbsolutePath}: ${e.getMessage}")
+                failedCount += 1
+            }
+          }
+
+          if (logFiles.lengthIs > 1) {
+            logger.info(s"Processed $processedCount files successfully, $failedCount failed")
+          }
+
+          if (failedCount > 0) 1 else 0
+      }
     }
   }
 
