@@ -145,4 +145,38 @@ lazy val testFramework = gatlingModule("gatling-test-framework")
   .settings(libraryDependencies ++= testFrameworkDependencies)
 
 lazy val logParserCli = gatlingModule("gatling-log-parser-cli")
+  .enablePlugins(GraalVMNativeImagePlugin, AssemblyPlugin)
   .dependsOn(charts % "compile->compile;test->test", app % "compile->compile")
+  .settings(
+    Compile / mainClass := Some("io.gatling.logparser.GatlingLogParserCli"),
+    assembly / mainClass := Some("io.gatling.logparser.GatlingLogParserCli"),
+    assembly / assemblyJarName := s"gatling-log-parser-cli-${version.value}-assembly.jar",
+    assembly / assemblyMergeStrategy := {
+      case "META-INF/MANIFEST.MF" => MergeStrategy.discard
+      case "META-INF/versions/9/module-info.class" => MergeStrategy.discard
+      case "module-info.class" => MergeStrategy.discard
+      case PathList("META-INF", xs @ _*) if xs.last.endsWith(".SF") => MergeStrategy.discard
+      case PathList("META-INF", xs @ _*) if xs.last.endsWith(".DSA") => MergeStrategy.discard
+      case PathList("META-INF", xs @ _*) if xs.last.endsWith(".RSA") => MergeStrategy.discard
+      case PathList("META-INF", "services", xs @ _*) => MergeStrategy.filterDistinctLines
+      case PathList("META-INF", "native-image", xs @ _*) => MergeStrategy.first
+      case x if x.endsWith(".conf") => MergeStrategy.concat
+      case x if x.endsWith(".properties") => MergeStrategy.filterDistinctLines
+      case x if x.endsWith(".xml") => MergeStrategy.first
+      case x => MergeStrategy.first
+    },
+    graalVMNativeImageOptions ++= Seq(
+      "--no-fallback",
+      "--initialize-at-build-time",
+      "--enable-https",
+      "--enable-all-security-services",
+      "-H:+ReportExceptionStackTraces",
+      "-H:IncludeResources=.*\\.properties",
+      "-H:IncludeResources=.*\\.xml",
+      "-H:IncludeResources=logback\\.xml",
+      "-H:+AddAllCharsets",
+      "--install-exit-handlers"
+    ),
+    graalVMNativeImageGraalVersion := Some("21.0.2"),
+    graalVMNativeImageCommand := (if (System.getProperty("os.name").toLowerCase.contains("linux")) "/usr/bin/native-image" else "native-image")
+  )

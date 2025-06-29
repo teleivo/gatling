@@ -1,0 +1,23 @@
+FROM ghcr.io/graalvm/native-image-community:21-muslib AS build
+
+WORKDIR /build
+
+# Copy the assembly JAR
+COPY target/*-assembly.jar app.jar
+
+# Build native image
+RUN native-image \
+    -jar app.jar \
+    -H:Name=gatling-log-parser \
+    -H:+ReportExceptionStackTraces \
+    --no-fallback \
+    --enable-https \
+    --enable-all-security-services \
+    --install-exit-handlers \
+    -H:+AddAllCharsets \
+    --static \
+    --libc=musl
+
+FROM scratch
+COPY --from=build /build/gatling-log-parser /gatling-log-parser
+ENTRYPOINT ["/gatling-log-parser"]

@@ -1,0 +1,16 @@
+{
+  "resources": {
+    "includes": [
+      {"pattern": ".*\\.properties"},
+      {"pattern": ".*\\.xml"},
+      {"pattern": "logback\\.xml"},
+      {"pattern": "logback-test\\.xml"},
+      {"pattern": "gatling\\.conf"},
+      {"pattern": "gatling-defaults\\.conf"},
+      {"pattern": "reference\\.conf"},
+      {"pattern": "application\\.conf"},
+      {"pattern": "META-INF/services/.*"}
+    ]
+  },
+  "bundles": []
+}
