@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.gatling.logparser
+package io.gatling.logparser.cli
 
 final case class LogParserArgs(
     logFilePath: String,

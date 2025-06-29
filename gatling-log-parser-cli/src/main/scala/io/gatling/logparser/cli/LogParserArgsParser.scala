@@ -17,7 +17,6 @@
 package io.gatling.logparser.cli
 
 import io.gatling.app.cli.StatusCode
-import io.gatling.logparser.LogParserArgs
 
 final class LogParserArgsParser(args: Array[String]) {
 
